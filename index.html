@@ -15,7 +15,7 @@
     /* 戻るボタン用のスタイル */
     .btn-secondary { background-color: #6c757d; margin-bottom: 12px; }
     
-    /* ★追加：プログレスバー用CSS */
+    /* プログレスバー用CSS */
     .progress-container { margin-bottom: 25px; }
     .progress-text { text-align: right; font-size: 0.85em; color: #666; margin-bottom: 5px; font-weight: bold; }
     .progress-bar-bg { background-color: #e9ecef; border-radius: 10px; height: 10px; overflow: hidden; }
@@ -41,7 +41,7 @@
   <!-- 2. アンケートフォーム -->
   <form id="surveyForm">
 
-    <!-- ★追加：プログレスバー表示部分 -->
+    <!-- プログレスバー表示部分 -->
     <div class="progress-container">
       <div id="progressText" class="progress-text">STEP 1 / 3</div>
       <div class="progress-bar-bg">
@@ -64,15 +64,23 @@
       <button type="button" id="nextBtn" disabled onclick="goToStep(2)">次へ進む</button>
     </div>
 
-    <!-- 【STEP 2】質問画面（1問目：年代） -->
+    <!-- 【STEP 2】質問画面（年齢・性別） -->
     <div id="step2" class="step">
+      <!-- ★変更：年齢入力欄 -->
       <div class="form-group">
-        <label for="age">年代</label>
-        <select id="age" required>
+        <label for="age">年齢</label>
+        <input type="number" id="age" min="0" max="120" placeholder="例: 21" required>
+      </div>
+
+      <!-- ★変更：性別選択欄 -->
+      <div class="form-group">
+        <label for="gender">性別</label>
+        <select id="gender" required>
           <option value="">選択してください</option>
-          <option value="10s">10代</option>
-          <option value="20s">20代</option>
-          <option value="30s">30代以上</option>
+          <option value="男性">男性</option>
+          <option value="女性">女性</option>
+          <option value="その他">その他</option>
+          <option value="回答しない">回答しない</option>
         </select>
       </div>
 
@@ -80,14 +88,14 @@
       <button type="button" onclick="validateAndNext(2, 3)">次へ進む</button>
     </div>
 
-    <!-- 【STEP 3】質問画面（2問目：自由記述） -->
+    <!-- 【STEP 3】質問画面（自由記述） -->
     <div id="step3" class="step">
       <div class="form-group">
         <label for="feedback">ご意見・自由記述</label>
         <textarea id="feedback" rows="4" required></textarea>
       </div>
 
-      <button type="button" class="btn-secondary" onclick="goToStep(2)">＜ 1問目に戻る</button>
+      <button type="button" class="btn-secondary" onclick="goToStep(2)">＜ 属性入力に戻る</button>
       <button type="submit" id="submitBtn">送信する</button>
     </div>
 
@@ -99,15 +107,13 @@
     const surveyForm = document.getElementById('surveyForm');
     const submittedMessage = document.getElementById('submittedMessage');
 
-    // ★追加：全ステップ数を定義
     const TOTAL_STEPS = 3;
 
-    // 画面切り替え関数（プログレスバーの自動更新付き）
+    // 画面切り替え関数
     function goToStep(stepNumber) {
       document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
       document.getElementById(`step${stepNumber}`).classList.add('active');
       
-      // ★追加：プログレスバーの更新
       const percentage = (stepNumber / TOTAL_STEPS) * 100;
       document.getElementById('progressBarFill').style.width = `${percentage}%`;
       document.getElementById('progressText').innerText = `STEP ${stepNumber} / ${TOTAL_STEPS}`;
@@ -154,8 +160,10 @@
       submitBtn.disabled = true;
       submitBtn.innerText = "送信中...";
 
+      // ★送信データを年齢（age）・性別（gender）・自由記述（feedback）に変更
       const payload = {
         age: document.getElementById('age').value,
+        gender: document.getElementById('gender').value,
         feedback: document.getElementById('feedback').value
       };
 
