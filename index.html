@@ -11,12 +11,20 @@
     input, select, textarea, button { width: 100%; padding: 10px; box-sizing: border-box; }
     button { background-color: #007bff; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
     button:disabled { background-color: #ccc; cursor: not-allowed; }
+    #submittedMessage { display: none; padding: 20px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; }
   </style>
 </head>
 <body>
 
   <h2>卒業研究に関するアンケート</h2>
 
+  <!-- 回答済みの場合に表示するメッセージ -->
+  <div id="submittedMessage">
+    <p><strong>ご協力ありがとうございました。</strong></p>
+    <p>この端末からは既に回答が送信されています。</p>
+  </div>
+
+  <!-- アンケートフォーム -->
   <form id="surveyForm">
     <div class="form-group">
       <label for="age">年代</label>
@@ -37,12 +45,24 @@
   </form>
 
   <script>
-    // ★手順1で取得したGASのWebアプリURLに差し替えてください
+    // ★ご自身のGASのWebアプリURLに書き換えてください
     const GAS_URL = "https://script.google.com/macros/s/AKfycbxd7RiFBfInPgR0Xvpv8d6qFll1IGl_FeComBHgBuex3QLsjrw7K7NuaJw1bvos48riUQ/exec";
 
-    document.getElementById('surveyForm').addEventListener('submit', async (e) => {
+    const surveyForm = document.getElementById('surveyForm');
+    const submittedMessage = document.getElementById('submittedMessage');
+
+    // ページ読み込み時に「すでに回答済みか」を判定
+    window.addEventListener('DOMContentLoaded', () => {
+      if (localStorage.getItem('has_submitted_survey')) {
+        surveyForm.style.display = 'none';
+        submittedMessage.style.display = 'block';
+      }
+    });
+
+    // フォーム送信処理
+    surveyForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      
+
       const submitBtn = document.getElementById('submitBtn');
       submitBtn.disabled = true;
       submitBtn.innerText = "送信中...";
@@ -53,7 +73,6 @@
       };
 
       try {
-        // GASへの送信（no-cors モードで送信）
         await fetch(GAS_URL, {
           method: 'POST',
           mode: 'no-cors',
@@ -61,9 +80,15 @@
           body: JSON.stringify(payload)
         });
 
+        // 送信成功時：ブラウザに回答済みフラグを保存
+        localStorage.setItem('has_submitted_survey', 'true');
+
         alert('ご協力ありがとうございました！回答を受け付けました。');
-        document.getElementById('surveyForm').reset();
-        submitBtn.innerText = "送信完了";
+        
+        // 画面を切り替える
+        surveyForm.style.display = 'none';
+        submittedMessage.style.display = 'block';
+
       } catch (error) {
         alert('送信に失敗しました。時間をおいて再度お試しください。');
         console.error(error);
