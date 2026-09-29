@@ -3,110 +3,72 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>学術調査アンケート</title>
+  <title>卒業研究アンケート</title>
   <style>
-    body { font-family: sans-serif; max-width: 600px; margin: 20px auto; padding: 0 10px; }
-    .page { display: none; }
-    .active { display: block; }
-    .error { color: red; font-size: 0.9em; }
-    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    body { font-family: sans-serif; max-width: 500px; margin: 30px auto; padding: 0 15px; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; }
+    input, select, textarea, button { width: 100%; padding: 10px; box-sizing: border-box; }
+    button { background-color: #007bff; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
+    button:disabled { background-color: #ccc; cursor: not-allowed; }
   </style>
 </head>
 <body>
 
-  <!-- 1. 同意画面 -->
-  <div id="page1" class="page active">
-    <h2>研究協力に関するお願い</h2>
-    <p>本アンケートのデータは研究目的以外には使用いたしません。</p>
-    <label>
-      <input type="checkbox" id="consent"> 上記内容に同意します
-    </label><br><br>
-    <button onclick="nextPage(2)" id="btnConsent" disabled>次へ進む</button>
-  </div>
+  <h2>卒業研究に関するアンケート</h2>
 
-  <!-- 2. 質問画面 -->
-  <div id="page2" class="page">
-    <h2>アンケート項目</h2>
-    <form id="surveyForm">
-      <div>
-        <label>年代:</label><br>
-        <select id="age" required>
-          <option value="">選択してください</option>
-          <option value="10s">10代</option>
-          <option value="20s">20代</option>
-          <option value="30s">30代以上</option>
-        </select>
-      </div><br>
+  <form id="surveyForm">
+    <div class="form-group">
+      <label for="age">年代</label>
+      <select id="age" required>
+        <option value="">選択してください</option>
+        <option value="10s">10代</option>
+        <option value="20s">20代</option>
+        <option value="30s">30代以上</option>
+      </select>
+    </div>
 
-      <div>
-        <label>本サービスを利用したことがありますか？</label><br>
-        <label><input type="radio" name="used" value="yes" required onclick="toggleConditional(true)"> あり</label>
-        <label><input type="radio" name="used" value="no" required onclick="toggleConditional(false)"> なし</label>
-      </div><br>
+    <div class="form-group">
+      <label for="feedback">ご意見・自由記述</label>
+      <textarea id="feedback" rows="4" required></textarea>
+    </div>
 
-      <!-- 動的分岐項目 -->
-      <div id="conditionalQ" style="display: none;">
-        <label>利用頻度を教えてください:</label><br>
-        <input type="text" id="frequency">
-      </div><br>
-
-      <button type="submit" id="submitBtn">回答を送信する</button>
-      <p id="statusMsg"></p>
-    </form>
-  </div>
+    <button type="submit" id="submitBtn">送信する</button>
+  </form>
 
   <script>
-    const GAS_URL = "YOUR_GAS_ENDPOINT_URL";
-    const startTime = Date.now();
+    // ★手順1で取得したGASのWebアプリURLに差し替えてください
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbxd7RiFBfInPgR0Xvpv8d6qFll1IGl_FeComBHgBuex3QLsjrw7K7NuaJw1bvos48riUQ/exec";
 
-    // 同意チェックボックスの制御
-    document.getElementById('consent').addEventListener('change', (e) => {
-      document.getElementById('btnConsent').disabled = !e.target.checked;
-    });
-
-    function nextPage(pageNum) {
-      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-      document.getElementById(`page${pageNum}`).classList.add('active');
-    }
-
-    // 条件分岐の表示制御
-    function toggleConditional(show) {
-      const q = document.getElementById('conditionalQ');
-      q.style.display = show ? 'block' : 'none';
-      if (!show) document.getElementById('frequency').value = '';
-    }
-
-    // 送信処理
     document.getElementById('surveyForm').addEventListener('submit', async (e) => {
       e.preventDefault();
+      
       const submitBtn = document.getElementById('submitBtn');
-      const statusMsg = document.getElementById('statusMsg');
-
-      // 二重送信防止
       submitBtn.disabled = true;
-      statusMsg.innerText = '送信中...';
+      submitBtn.innerText = "送信中...";
 
       const payload = {
         age: document.getElementById('age').value,
-        used: document.querySelector('input[name="used"]:checked').value,
-        frequency: document.getElementById('frequency').value,
-        durationSec: Math.round((Date.now() - startTime) / 1000), // 回答所要時間(秒)
-        userAgent: navigator.userAgent
+        feedback: document.getElementById('feedback').value
       };
 
       try {
+        // GASへの送信（no-cors モードで送信）
         await fetch(GAS_URL, {
           method: 'POST',
           mode: 'no-cors',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
-        alert('ご協力ありがとうございました。回答が送信されました。');
-        submitBtn.value = '送信完了';
-      } catch (err) {
-        alert('送信エラーが発生しました。ネットワーク状態を確認してください。');
+
+        alert('ご協力ありがとうございました！回答を受け付けました。');
+        document.getElementById('surveyForm').reset();
+        submitBtn.innerText = "送信完了";
+      } catch (error) {
+        alert('送信に失敗しました。時間をおいて再度お試しください。');
+        console.error(error);
         submitBtn.disabled = false;
-        statusMsg.innerText = '';
+        submitBtn.innerText = "送信する";
       }
     });
   </script>
