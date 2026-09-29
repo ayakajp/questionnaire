@@ -11,8 +11,16 @@
     input, select, textarea, button { width: 100%; padding: 10px; box-sizing: border-box; }
     button { background-color: #007bff; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
     button:disabled { background-color: #ccc; cursor: not-allowed; }
-    .btn-secondary { background-color: #6c757d; margin-bottom: 10px; }
     
+    /* 戻るボタン用のスタイル */
+    .btn-secondary { background-color: #6c757d; margin-bottom: 12px; }
+    
+    /* ★追加：プログレスバー用CSS */
+    .progress-container { margin-bottom: 25px; }
+    .progress-text { text-align: right; font-size: 0.85em; color: #666; margin-bottom: 5px; font-weight: bold; }
+    .progress-bar-bg { background-color: #e9ecef; border-radius: 10px; height: 10px; overflow: hidden; }
+    .progress-bar-fill { background-color: #007bff; height: 100%; width: 33.3%; transition: width 0.3s ease; }
+
     /* 画面切り替え用の表示制御 */
     .step { display: none; }
     .step.active { display: block; }
@@ -33,6 +41,14 @@
   <!-- 2. アンケートフォーム -->
   <form id="surveyForm">
 
+    <!-- ★追加：プログレスバー表示部分 -->
+    <div class="progress-container">
+      <div id="progressText" class="progress-text">STEP 1 / 3</div>
+      <div class="progress-bar-bg">
+        <div id="progressBarFill" class="progress-bar-fill"></div>
+      </div>
+    </div>
+
     <!-- 【STEP 1】同意画面 -->
     <div id="step1" class="step active">
       <div style="background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
@@ -45,11 +61,10 @@
         </label>
       </div>
       
-      <!-- 同意画面からの「次へ」ボタン -->
       <button type="button" id="nextBtn" disabled onclick="goToStep(2)">次へ進む</button>
     </div>
 
-    <!-- 【STEP 2】質問画面 -->
+    <!-- 【STEP 2】質問画面（1問目：年代） -->
     <div id="step2" class="step">
       <div class="form-group">
         <label for="age">年代</label>
@@ -61,40 +76,69 @@
         </select>
       </div>
 
+      <button type="button" class="btn-secondary" onclick="goToStep(1)">＜ 同意画面に戻る</button>
+      <button type="button" onclick="validateAndNext(2, 3)">次へ進む</button>
+    </div>
+
+    <!-- 【STEP 3】質問画面（2問目：自由記述） -->
+    <div id="step3" class="step">
       <div class="form-group">
         <label for="feedback">ご意見・自由記述</label>
         <textarea id="feedback" rows="4" required></textarea>
       </div>
 
-      <!-- 戻るボタン（必要に応じて設置） -->
-      <button type="button" class="btn-secondary" onclick="goToStep(1)">＜ 同意画面に戻る</button>
-      
-      <!-- 送信ボタン -->
+      <button type="button" class="btn-secondary" onclick="goToStep(2)">＜ 1問目に戻る</button>
       <button type="submit" id="submitBtn">送信する</button>
     </div>
 
   </form>
 
   <script>
-    // ★ご自身のGASのWebアプリURLに書き換えてください
     const GAS_URL = "https://script.google.com/macros/s/AKfycbxd7RiFBfInPgR0Xvpv8d6qFll1IGl_FeComBHgBuex3QLsjrw7K7NuaJw1bvos48riUQ/exec";
 
     const surveyForm = document.getElementById('surveyForm');
     const submittedMessage = document.getElementById('submittedMessage');
 
-    // ★追加：画面（ステップ）を切り替える関数
+    // ★追加：全ステップ数を定義
+    const TOTAL_STEPS = 3;
+
+    // 画面切り替え関数（プログレスバーの自動更新付き）
     function goToStep(stepNumber) {
       document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
       document.getElementById(`step${stepNumber}`).classList.add('active');
-      window.scrollTo(0, 0); // 画面上部にスクロール
+      
+      // ★追加：プログレスバーの更新
+      const percentage = (stepNumber / TOTAL_STEPS) * 100;
+      document.getElementById('progressBarFill').style.width = `${percentage}%`;
+      document.getElementById('progressText').innerText = `STEP ${stepNumber} / ${TOTAL_STEPS}`;
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // ★追加：同意チェックボックスで「次へ進む」ボタンを制御
+    // 入力チェックを行ってから次のステップへ進む関数
+    function validateAndNext(currentStep, nextStepNumber) {
+      const currentStepEl = document.getElementById(`step${currentStep}`);
+      const inputs = currentStepEl.querySelectorAll('select[required], input[required], textarea[required]');
+      
+      let isValid = true;
+      inputs.forEach(input => {
+        if (!input.checkValidity()) {
+          input.reportValidity();
+          isValid = false;
+        }
+      });
+
+      if (isValid) {
+        goToStep(nextStepNumber);
+      }
+    }
+
+    // 同意チェックボックスの制御
     document.getElementById('consentCheck').addEventListener('change', (e) => {
       document.getElementById('nextBtn').disabled = !e.target.checked;
     });
 
-    // 既存処理：ページ読み込み時に「すでに回答済みか」を判定
+    // ページ読み込み時に回答済みか判定
     window.addEventListener('DOMContentLoaded', () => {
       if (localStorage.getItem('has_submitted_survey')) {
         surveyForm.style.display = 'none';
@@ -102,7 +146,7 @@
       }
     });
 
-    // 既存処理：フォーム送信処理
+    // フォーム送信処理
     surveyForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
