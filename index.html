@@ -11,6 +11,12 @@
     input, select, textarea, button { width: 100%; padding: 10px; box-sizing: border-box; }
     button { background-color: #007bff; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
     button:disabled { background-color: #ccc; cursor: not-allowed; }
+    .btn-secondary { background-color: #6c757d; margin-bottom: 10px; }
+    
+    /* 画面切り替え用の表示制御 */
+    .step { display: none; }
+    .step.active { display: block; }
+    
     #submittedMessage { display: none; padding: 20px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; }
   </style>
 </head>
@@ -18,30 +24,55 @@
 
   <h2>卒業研究に関するアンケート</h2>
 
-  <!-- 回答済みの場合に表示するメッセージ -->
+  <!-- 1. 回答済みの場合に表示するメッセージ -->
   <div id="submittedMessage">
     <p><strong>ご協力ありがとうございました。</strong></p>
     <p>この端末からは既に回答が送信されています。</p>
   </div>
 
-  <!-- アンケートフォーム -->
+  <!-- 2. アンケートフォーム -->
   <form id="surveyForm">
-    <div class="form-group">
-      <label for="age">年代</label>
-      <select id="age" required>
-        <option value="">選択してください</option>
-        <option value="10s">10代</option>
-        <option value="20s">20代</option>
-        <option value="30s">30代以上</option>
-      </select>
+
+    <!-- 【STEP 1】同意画面 -->
+    <div id="step1" class="step active">
+      <div style="background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+        <h3 style="margin-top: 0; font-size: 1.1em;">研究協力に関するお願い</h3>
+        <p style="font-size: 0.9em; color: #555; line-height: 1.5;">
+          本アンケートでご回答いただいたデータは、卒業研究の分析目的のみに使用し、個人が特定される形で公開されることはありません。
+        </p>
+        <label style="font-weight: normal; cursor: pointer;">
+          <input type="checkbox" id="consentCheck" style="width: auto;"> 上記の内容に同意して回答する
+        </label>
+      </div>
+      
+      <!-- 同意画面からの「次へ」ボタン -->
+      <button type="button" id="nextBtn" disabled onclick="goToStep(2)">次へ進む</button>
     </div>
 
-    <div class="form-group">
-      <label for="feedback">ご意見・自由記述</label>
-      <textarea id="feedback" rows="4" required></textarea>
+    <!-- 【STEP 2】質問画面 -->
+    <div id="step2" class="step">
+      <div class="form-group">
+        <label for="age">年代</label>
+        <select id="age" required>
+          <option value="">選択してください</option>
+          <option value="10s">10代</option>
+          <option value="20s">20代</option>
+          <option value="30s">30代以上</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="feedback">ご意見・自由記述</label>
+        <textarea id="feedback" rows="4" required></textarea>
+      </div>
+
+      <!-- 戻るボタン（必要に応じて設置） -->
+      <button type="button" class="btn-secondary" onclick="goToStep(1)">＜ 同意画面に戻る</button>
+      
+      <!-- 送信ボタン -->
+      <button type="submit" id="submitBtn">送信する</button>
     </div>
 
-    <button type="submit" id="submitBtn">送信する</button>
   </form>
 
   <script>
@@ -51,7 +82,19 @@
     const surveyForm = document.getElementById('surveyForm');
     const submittedMessage = document.getElementById('submittedMessage');
 
-    // ページ読み込み時に「すでに回答済みか」を判定
+    // ★追加：画面（ステップ）を切り替える関数
+    function goToStep(stepNumber) {
+      document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
+      document.getElementById(`step${stepNumber}`).classList.add('active');
+      window.scrollTo(0, 0); // 画面上部にスクロール
+    }
+
+    // ★追加：同意チェックボックスで「次へ進む」ボタンを制御
+    document.getElementById('consentCheck').addEventListener('change', (e) => {
+      document.getElementById('nextBtn').disabled = !e.target.checked;
+    });
+
+    // 既存処理：ページ読み込み時に「すでに回答済みか」を判定
     window.addEventListener('DOMContentLoaded', () => {
       if (localStorage.getItem('has_submitted_survey')) {
         surveyForm.style.display = 'none';
@@ -59,7 +102,7 @@
       }
     });
 
-    // フォーム送信処理
+    // 既存処理：フォーム送信処理
     surveyForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
@@ -80,12 +123,9 @@
           body: JSON.stringify(payload)
         });
 
-        // 送信成功時：ブラウザに回答済みフラグを保存
         localStorage.setItem('has_submitted_survey', 'true');
-
         alert('ご協力ありがとうございました！回答を受け付けました。');
         
-        // 画面を切り替える
         surveyForm.style.display = 'none';
         submittedMessage.style.display = 'block';
 
